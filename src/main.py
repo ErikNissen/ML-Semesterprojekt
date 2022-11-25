@@ -71,25 +71,25 @@ class Table:
 		x, y = self.actual_pos
 		if x > 0:
 			self.actual_pos = x - 1, y
-			self.visited.append([self.actual_pos, math.pow(0.91, self.steps)])
+			self.visited.append([self.actual_pos, math.pow(0.999, self.steps)])
 
 	def go_right(self):
 		x, y = self.actual_pos
 		if x < self.width - 1:
 			self.actual_pos = x + 1, y
-			self.visited.append([self.actual_pos, math.pow(0.91, self.steps)])
+			self.visited.append([self.actual_pos, math.pow(0.999, self.steps)])
 
 	def go_up(self):
 		x, y = self.actual_pos
 		if y > 0:
 			self.actual_pos = x, y - 1
-			self.visited.append([self.actual_pos, math.pow(0.91, self.steps)])
+			self.visited.append([self.actual_pos, math.pow(0.999, self.steps)])
 
 	def go_down(self):
 		x, y = self.actual_pos
 		if y < self.height - 1:
 			self.actual_pos = x, y + 1
-			self.visited.append([self.actual_pos, math.pow(0.91, self.steps)])
+			self.visited.append([self.actual_pos, math.pow(0.999, self.steps)])
 
 	def draw_actual_pos(self, screen):
 		x, y = self.actual_pos
@@ -128,13 +128,14 @@ class Table:
 			x, y = pos
 
 			r = pygame.Surface((self.cell_size, self.cell_size))
-			r.set_alpha(1)
+			r.set_alpha(10)
 			r.fill(pygame.Color('red'))
 			self.screen.blit(r, (x * self.cell_size, y * self.cell_size))
 
 	def draw_text_in_cell(self, text, pos):
 		# check if is text in the cell
 		if self.screen.get_at((pos[0] * self.cell_size + self.cell_size // 2, pos[1] * self.cell_size + self.cell_size // 2)) != pygame.Color('white'):
+			self.steps += 1
 			return 
 		# draw the text in the cells in the middle
 		pygame.font.init()
