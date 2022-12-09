@@ -41,6 +41,9 @@ class Robot:
     def getPos(self):
         return self.x, self.y
 
+    def getoldPos(self):
+        return self.oldPositons
+
     def distance(self, point):
         return sqrt((self.x - point[0]) ** 2 + (self.y - point[1]) ** 2)
 

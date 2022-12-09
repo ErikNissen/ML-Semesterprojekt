@@ -68,6 +68,7 @@ class MainWindow(QWidget):
         self.show()
 
     def LogViewer(self):
+        return
         if self.log is None:
             self.log = LogWindow()
         self.log.show()
@@ -277,7 +278,8 @@ class MainWindow(QWidget):
                 if self.robotPosition not in self.robot.visited:
                     self.robot.visited.append(self.robotPosition)
                 self.robot.steps += 1
-                self.log.log(f"Robot Position: {self.robotPosition}")
+                print(f"Robot Position: {self.robotPosition}")
+                print(f"Old Robot Position: {self.robot.getoldPos()}")
                 self.update()
                 sleep(delay)
             self.log.log(f"Robot Steps: {self.robot.steps}")
@@ -303,8 +305,7 @@ class MainWindow(QWidget):
                     # points += median
                     points += median
 
-                self.log.log(f"{b}: {points} bei Position:"
-                            f" {self.robot.visited[b]}")
+                print(f"{b}: {points} bei Position:{self.robot.visited[b]}")
                 self.setPoints(points, backvisited[b])
                 self.update(end=True)
         except Exception as e:
