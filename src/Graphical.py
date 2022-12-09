@@ -93,8 +93,7 @@ class MainWindow(QWidget):
         radiobtnlayout.addWidget(iteration)
         radiobtnlayout.addWidget(explore)
         radiobtnlayout.addWidget(self.createRadioButton(
-                "Find Way", self.findWayMode, (0, 400)))  # "Find Way" kann
-        # nur benutzt werden, wenn mindestens 1 Explor gemacht wurde
+                "Find Way", self.findWayMode, (0, 400)))
         self.layout.addLayout(radiobtnlayout)
 
     def hindernissMenu(self):
@@ -282,7 +281,7 @@ class MainWindow(QWidget):
                 print(f"Old Robot Position: {self.robot.getoldPos()}")
                 self.update()
                 sleep(delay)
-            self.log.log(f"Robot Steps: {self.robot.steps}")
+            print(f"Robot Steps: {self.robot.steps}")
 
             backvisited = self.robot.visited[::-1]
             for b in range(len(backvisited)):

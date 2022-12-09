@@ -9,15 +9,18 @@ from src.Graphical import MainWindow
 # ToDo 5: non-/Explorer mode einbauen => "läuft den punkten hinterher" => Checkbox benötigt?
 # ToDo 5 -> keine Checkbox, nutzen 2 buttons: Button 1 "Explorer" | Button 2: "Find Way"
 # ToDo 4: wenn Feld Punkte hat, AI darf NICHT zurücklaufen um punkte
-#  mehrfach einzustecken (?!) - AI Minuspunkte geben => wird doch nich
-#  benötigt!
-
-# ToDo: Half Solved
+#  mehrfach einzustecken (?!) - AI Minuspunkte geben => wird doch nich benötigt!
 # ToDo 6: button einbauen um Start-/Endpunkt zu ändern - gesetzte Punkte bleiben in den Zellen erhalten! => S & E bleiben vorhanden, wenn nicht rübergelaufen wurde
 
 # ToDO: WIP
 # ToDo 2: Punkte vergabe: wenn im Feld bereits punkte vorhanden sind nehme den Mittelwert aus beiden Zahlen
 # ToDo 7: Hindernisse einbauen
+#  WICHTIG!! Hindernisse müssen so gebaut sein das man noch zum Ziel kommt
+#  (Optional) Sowohl random als auch feste strecken
+
+# ToDo: Open
+#  Parameterisieren:
+#   Tabel Größe (X, Y) im nachhinein vergrößern oder verkleinern können -> new draw
 
 
 if __name__ == '__main__':
