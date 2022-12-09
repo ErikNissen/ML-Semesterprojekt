@@ -1,12 +1,19 @@
+import asyncio
+import sys
+import threading
 from random import randint
 from time import sleep
 
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (QHBoxLayout, QLineEdit, QPushButton, QRadioButton,
+from PyQt5.QtGui import QColor, QFont, QTextOption
+from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QHBoxLayout,
+                             QHeaderView,
+                             QLineEdit, QMainWindow, QPushButton,
+                             QRadioButton,
                              QTableWidget,
                              QTableWidgetItem,
-                             QVBoxLayout, QWidget)
+                             QTextEdit, QVBoxLayout, QWidget)
 
+from src.Log import LogWindow
 from src.modes import Mode
 from src.Robot import Robot
 
@@ -14,10 +21,11 @@ from src.Robot import Robot
 class MainWindow(QWidget):
     def __init__(self, title, width, height, left=0, top=0):
         super().__init__()
+        self.log = None
         self.hindernisswidth = None
         self.hindernissheight = None
-        self.hindernissCenterY = None
-        self.hindernissCenterX = None
+        self.hindernissY = None
+        self.hindernissX = None
         self.iterations = 1
         self.tbl = QTableWidget()
         self.title = title
@@ -40,7 +48,8 @@ class MainWindow(QWidget):
         self.randomStartPoint()  # create startPoint
         self.randomEndPoint()  # create endPoint
 
-        self.robot = Robot(self.startPoint, self.endPoint, self.tbl)  # create Robot
+        self.robot = Robot(self.startPoint, self.endPoint,
+                           self.tbl)  # create Robot
         self.robotPosition = self.robot.getPos()
 
         self.layout = QVBoxLayout()
@@ -58,7 +67,13 @@ class MainWindow(QWidget):
                 "QTableView {gridline-color: rgb(200,200,200);}")
         self.show()
 
+    def LogViewer(self):
+        if self.log is None:
+            self.log = LogWindow()
+        self.log.show()
+
     def buttons(self):
+        self.btns.append(self.createButton("Show Log", self.LogViewer, (0, 200)))
         self.btns.append(self.createButton("Start", self.restart, (0, 0)))
         self.btns.append(self.createButton("Automatic", self.automatic, (0,
                                                                          100)))
@@ -72,7 +87,8 @@ class MainWindow(QWidget):
         explore = self.createRadioButton(
                 "Explorer", self.explorerMode, (0, 200))
         explore.setChecked(True)
-        iteration = self.createInputField("Iteration", (0, 300), self.setIterations)
+        iteration = self.createInputField("Iteration", (0, 300),
+                                          self.setIterations)
         radiobtnlayout.addWidget(iteration)
         radiobtnlayout.addWidget(explore)
         radiobtnlayout.addWidget(self.createRadioButton(
@@ -82,35 +98,38 @@ class MainWindow(QWidget):
 
     def hindernissMenu(self):
         layout = QHBoxLayout()
-        layout.addWidget(self.createButton("Erstell Hinderniss", self.createHinderniss, (0,
-                                                                                         200)))
-        xcenterInput = self.createInputField("X", (0, 200), self.setHindernissCenterX)
-        ycenterInput = self.createInputField("Y", (0, 200), self.setHindernissCenterY)
+        layout.addWidget(
+                self.createButton("Erstell Hinderniss", self.createHinderniss,
+                                  (0,
+                                   200)))
+        xInput = self.createInputField("X", (0, 200), self.setHindernissX)
+        yInput = self.createInputField("Y", (0, 200), self.setHindernissY)
         widthInput = self.createInputField("Width", (0, 200),
-                                    self.setHindernisswidth)
+                                           self.setHindernisswidth)
         heightInput = self.createInputField("Height", (0, 200),
-                                            self.setHindernisshight)
+                                            self.setHindernissheight)
 
-        layout.addWidget(xcenterInput)
-        layout.addWidget(ycenterInput)
-        layout.addWidget(radiusInput)
+        layout.addWidget(xInput)
+        layout.addWidget(yInput)
+        layout.addWidget(widthInput)
+        layout.addWidget(heightInput)
         self.layout.addLayout(layout)
 
-    def setHindernissCenterX(self, x):
+    def setHindernissX(self, x):
         if int(x) < 0:
             x = 0
         elif int(x) > self.tableColumn:
             x = self.tableColumn
         else:
-            self.hindernissCenterX = int(x)
+            self.hindernissX = int(x)
 
-    def setHindernissCenterY(self, y):
+    def setHindernissY(self, y):
         if int(y) < 0:
             y = 0
         elif int(y) > self.tableRow:
             y = self.tableRow
         else:
-            self.hindernissCenterY = int(y)
+            self.hindernissY = int(y)
 
     def setHindernisswidth(self, width):
         if int(width) < 0:
@@ -128,32 +147,42 @@ class MainWindow(QWidget):
 
     def checkHinterniss(self):
         # Check if the start or end point is in hinderniss
-        if self.hindernissCenterX is not None and self.hindernissCenterY is not None and self.hindernisswidth is not None and self.hindernissheight is not None:
+        if self.hindernissX is not None and self.hindernissY is not None and self.hindernisswidth is not None and self.hindernissheight is not None:
             # Check if start point is in hinderniss
-            if self.hindernissCenterX - self.hindernisswidth / 2 <= self.startPoint[0] <= self.hindernissCenterX + self.hindernisswidth / 2 and self.hindernissCenterY - self.hindernissheight / 2 <= self.startPoint[1] <= self.hindernissCenterY + self.hindernissheight / 2:
+            if self.hindernissX - self.hindernisswidth / 2 <= self.startPoint[
+                0] <= self.hindernissX + self.hindernisswidth / 2 and self.hindernissY - self.hindernissheight / 2 <= \
+                    self.startPoint[
+                        1] <= self.hindernissY + self.hindernissheight / 2:
                 # if start point is in hinderniss, return false
                 return False
             # Check if end point is in hinderniss
-            if self.hindernissCenterX - self.hindernisswidth / 2 <= self.endPoint[0] <= self.hindernissCenterX + self.hindernisswidth / 2 and self.hindernissCenterY - self.hindernissheight / 2 <= self.endPoint[1] <= self.hindernissCenterY + self.hindernissheight / 2:
+            if self.hindernissX - self.hindernisswidth / 2 <= self.endPoint[
+                0] <= self.hindernissX + self.hindernisswidth / 2 and self.hindernissY - self.hindernissheight / 2 <= \
+                    self.endPoint[
+                        1] <= self.hindernissY + self.hindernissheight / 2:
                 # if end point is in hinderniss, return false
                 return False
             # if start and end point are not in hinderniss, return true
         return True
 
     def createHinderniss(self):
-        if self.hindernissCenterX is None or self.hindernissCenterY is None or self.hindernissRadius is None:
-            return
-        for x in range(self.tableColumn):
-            for y in range(self.tableRow):
-                if (x - self.hindernissCenterX) ** 2 + (y - self.hindernissCenterY) ** 2 <= self.hindernissRadius ** 2:
-                    self.tbl.setItem(y, x, QTableWidgetItem("////"))
-                    self.tbl.item(y, x).setBackground(QColor(255, 255, 255))
+        if self.checkHinterniss():
+            for x in range(self.hindernisswidth):
+                for y in range(self.hindernissheight):
+                    self.tbl.setItem(self.hindernissX + x,
+                                     self.hindernissY + y,
+                                     QTableWidgetItem(""))
+                    self.tbl.item(self.hindernissX + x,
+                                  self.hindernissY + y).setBackground(QColor(
+                            255, 255, 255))
+        else:
+            print("Start or End point is in hinderniss")
 
     def automatic(self):
         self.mode = Mode.EXPLORE
-        self.restart()
+        self.restart(0)
         self.mode = Mode.BYPOINTS
-        self.restart()
+        self.restart(0)
 
     def explorerMode(self):
         print("Explorer Mode")
@@ -232,15 +261,14 @@ class MainWindow(QWidget):
         self.tbl.resizeColumnsToContents()
         self.tbl.resizeRowsToContents()
 
-    def run(self):
+    def run(self, delay=1 / 144):
         try:
             while self.robotPosition != self.endPoint:
-                print(self.mode)
                 if self.mode == Mode.EXPLORE:
                     self.robot.randomMove()
                     self.boolFindWay = True
                 elif self.mode == Mode.BYPOINTS:
-                    if self.boolFindWay == True:
+                    if self.boolFindWay:
                         self.robot.movebyPoints()
                     else:
                         print("Need to Explorer First!")
@@ -249,10 +277,10 @@ class MainWindow(QWidget):
                 if self.robotPosition not in self.robot.visited:
                     self.robot.visited.append(self.robotPosition)
                 self.robot.steps += 1
-                print(f"Robot Position: {self.robotPosition}")
+                self.log.log(f"Robot Position: {self.robotPosition}")
                 self.update()
-                sleep(1 / 144)
-            print(f"Robot Steps: {self.robot.steps}")
+                sleep(delay)
+            self.log.log(f"Robot Steps: {self.robot.steps}")
 
             backvisited = self.robot.visited[::-1]
             for b in range(len(backvisited)):
@@ -275,7 +303,8 @@ class MainWindow(QWidget):
                     # points += median
                     points += median
 
-                print(f"{b}: {points} bei Position: {self.robot.visited[b]}")
+                self.log.log(f"{b}: {points} bei Position:"
+                            f" {self.robot.visited[b]}")
                 self.setPoints(points, backvisited[b])
                 self.update(end=True)
         except Exception as e:
@@ -289,11 +318,13 @@ class MainWindow(QWidget):
                 except:
                     pass
                 try:
-                    self.tbl.item(row, column).setBackground(QColor(75, 75, 75))
+                    self.tbl.item(row, column).setBackground(
+                            QColor(75, 75, 75))
                 except:
                     pass
 
-    def restart(self):
+    def restart(self, delay=1 / 144):
+        self.LogViewer()
         for _ in range(0, self.iterations):
             for x in range(self.tableRow):
                 for y in range(self.tableColumn):
@@ -304,7 +335,7 @@ class MainWindow(QWidget):
             self.robot = Robot(self.startPoint, self.endPoint, self.tbl)
             self.robotPosition = self.robot.getPos()
             self.update()
-            self.run()
+            self.run(delay)
 
     def createButton(self, name, function, position):
         button = QPushButton(name, self)

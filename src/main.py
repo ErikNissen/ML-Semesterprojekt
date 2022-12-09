@@ -20,18 +20,10 @@ from src.Graphical import MainWindow
 # ToDo 7: Hindernisse einbauen
 
 
-
-
-
-
-
-
-
-
-
 if __name__ == '__main__':
-    app = QApplication([])
-    ex = MainWindow(title='tbl', width=900, height=800)  # Window size
+    app = QApplication(sys.argv)
+    window = MainWindow(title='tbl', width=900, height=800)
+    window.show()
     sys.exit(app.exec_())
 
 """

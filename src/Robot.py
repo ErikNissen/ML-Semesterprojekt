@@ -1,3 +1,9 @@
+from math import sqrt
+from random import randint
+
+from src.modes import Mode
+
+
 class Robot:
     def __init__(self, startPoint, endPoint, table):
         self.x = startPoint[0]
@@ -7,6 +13,7 @@ class Robot:
         self.endPoint = endPoint
         self.table = table
         self.oldPos = None
+        self.oldPositons = []
 
     def getMode(self):
         return self.mode
@@ -20,6 +27,13 @@ class Robot:
             self.x -= 1
         elif direction == "right":
             self.x += 1
+        # If length of oldPositons is 3, overwrite first element
+        if len(self.oldPositons) == 3:
+            self.oldPositons[0] = self.oldPositons[1]
+            self.oldPositons[1] = self.oldPositons[2]
+            self.oldPositons[2] = self.getPos()
+        else:
+            self.oldPositons.append(self.getPos())
 
     def setMode(self, mode: Mode):
         self.mode = mode
@@ -29,6 +43,35 @@ class Robot:
 
     def distance(self, point):
         return sqrt((self.x - point[0]) ** 2 + (self.y - point[1]) ** 2)
+
+    def checkhinderniss(self, direction):
+        # Get Background Color of Cell
+        try:
+            if direction == "up":
+                color = self.table.item(self.x, self.y - 1).background()
+            elif direction == "down":
+                color = self.table.item(self.x, self.y + 1).background()
+            elif direction == "left":
+                color = self.table.item(self.x - 1, self.y).background()
+            elif direction == "right":
+                color = self.table.item(self.x + 1, self.y).background()
+        except:
+            return False
+        # Check if Color is White
+        if color == "#ffffff":
+            return True
+        else:
+            return False
+
+    def isStuck(self):
+        # Check if Robot is stuck based on old positions
+        try:
+            if self.oldPositons[0] == self.oldPositons[1] == self.oldPositons[2]:
+                return True
+            else:
+                return False
+        except:
+            return False
 
     def movebyPoints(self):
         if self.oldPos is None:
@@ -46,6 +89,13 @@ class Robot:
         if self.y < self.table.columnCount() - 1:
             # down
             neighbours.append((self.x, self.y + 1))
+        # Remove all cells with background color white
+        for neighbour in neighbours:
+            try:
+                if self.table.item(neighbour[0], neighbour[1]).background() == "#ffffff":
+                    neighbours.remove(neighbour)
+            except:
+                pass
         print(f"Neighbours: {neighbours}")
         # get points of neighbours
         points = []
@@ -67,15 +117,15 @@ class Robot:
         cell = neighbours[points.index(maxPoint)]
         print(f"Cell: {cell}")
         # check where to move
-        if cell[0] > self.x:
+        if cell[0] > self.x and not self.checkhinderniss("right"):
             self.move("right")
-        elif cell[0] < self.x:
+        elif cell[0] < self.x and not self.checkhinderniss("left"):
             self.move("left")
-        elif cell[1] > self.y:
+        elif cell[1] > self.y and not self.checkhinderniss("down"):
             self.move("down")
-        elif cell[1] < self.y:
+        elif cell[1] < self.y and not self.checkhinderniss("up"):
             self.move("up")
-        if self.oldPos == self.getPos():
+        if self.isStuck():
             print("Stuck")
             raise Exception("Stuck")
 
