@@ -129,11 +129,16 @@ class MainWindow(QWidget):
     def checkHinterniss(self):
         # Check if the start or end point is in hinderniss
         if self.hindernissCenterX is not None and self.hindernissCenterY is not None and self.hindernisswidth is not None and self.hindernissheight is not None:
+            # Check if start point is in hinderniss
             if self.hindernissCenterX - self.hindernisswidth / 2 <= self.startPoint[0] <= self.hindernissCenterX + self.hindernisswidth / 2 and self.hindernissCenterY - self.hindernissheight / 2 <= self.startPoint[1] <= self.hindernissCenterY + self.hindernissheight / 2:
-                self.randomStartPoint()
+                # if start point is in hinderniss, return false
+                return False
+            # Check if end point is in hinderniss
             if self.hindernissCenterX - self.hindernisswidth / 2 <= self.endPoint[0] <= self.hindernissCenterX + self.hindernisswidth / 2 and self.hindernissCenterY - self.hindernissheight / 2 <= self.endPoint[1] <= self.hindernissCenterY + self.hindernissheight / 2:
-                self.randomEndPoint()
-
+                # if end point is in hinderniss, return false
+                return False
+            # if start and end point are not in hinderniss, return true
+        return True
 
     def createHinderniss(self):
         if self.hindernissCenterX is None or self.hindernissCenterY is None or self.hindernissRadius is None:
