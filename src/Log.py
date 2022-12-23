@@ -1,10 +1,10 @@
-import asyncio
+# File: Log.py
 from threading import Thread
 from time import sleep
 
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont, QTextOption
-from PyQt5.QtWidgets import QLineEdit, QTextEdit, QWidget
+from PyQt5.QtWidgets import QTextEdit, QWidget
 
 
 class LogWindow(QWidget):

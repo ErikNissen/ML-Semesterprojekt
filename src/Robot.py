@@ -1,6 +1,6 @@
 from math import sqrt
 from random import randint
-
+from PyQt5.QtGui import QColor
 from src.modes import Mode
 
 
@@ -19,6 +19,7 @@ class Robot:
         return self.mode
 
     def move(self, direction):
+        self.oldPos = self.getPos()
         if direction == "up":
             self.y -= 1
         elif direction == "down":
@@ -42,7 +43,7 @@ class Robot:
         return self.x, self.y
 
     def getoldPos(self):
-        return self.oldPositons
+        return self.oldPos
 
     def distance(self, point):
         return sqrt((self.x - point[0]) ** 2 + (self.y - point[1]) ** 2)
@@ -68,12 +69,9 @@ class Robot:
 
     def isStuck(self):
         # Check if Robot is stuck based on old positions
-        try:
-            if self.oldPositons[0] == self.oldPositons[1] == self.oldPositons[2]:
-                return True
-            else:
-                return False
-        except:
+        if self.oldPositons[0] == self.oldPositons[2]:
+            return True
+        else:
             return False
 
     def movebyPoints(self):
@@ -95,8 +93,14 @@ class Robot:
         # Remove all cells with background color white
         for neighbour in neighbours:
             try:
-                if self.table.item(neighbour[0], neighbour[1]).background() == "#ffffff":
+                if self.table.item(neighbour[0],
+                                   neighbour[1]).background() == "#ffffff":
                     neighbours.remove(neighbour)
+                # else:
+                #     self.table.item(neighbour[0],
+                #                     neighbour[1]).setBackground(QColor(255,
+                #                                                        165,
+                #                                                        0, 50))
             except:
                 pass
         print(f"Neighbours: {neighbours}")
@@ -107,18 +111,21 @@ class Robot:
                 pointvalue = self.table.item(n[0], n[1]).text()
                 if pointvalue == "E":
                     pointvalue = 1
+                elif pointvalue == "S":
+                    pointvalue = -1
                 pointvalue = float(pointvalue)
             except:
-                pointvalue = -1
+                pointvalue = 0
             # convert #.##e+00 to float
             print(f"Point: {pointvalue}")
             points.append(pointvalue)
         # get max point
         maxPoint = max(points)
-        print(f"Max Point: {maxPoint}")
         # get cell of max point
         cell = neighbours[points.index(maxPoint)]
-        print(f"Cell: {cell}")
+        # self.table.item(cell[0], cell[1]).setBackground(QColor(255,
+        #                                                        165,
+        #                                                        0))
         # check where to move
         if cell[0] > self.x and not self.checkhinderniss("right"):
             self.move("right")
@@ -128,7 +135,7 @@ class Robot:
             self.move("down")
         elif cell[1] < self.y and not self.checkhinderniss("up"):
             self.move("up")
-        if self.isStuck():
+        if len(self.oldPositons) >= 3 and self.isStuck():
             print("Stuck")
             raise Exception("Stuck")
 

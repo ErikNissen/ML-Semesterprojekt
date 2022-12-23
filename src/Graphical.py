@@ -1,15 +1,18 @@
+# File: Graphical.py
+
 import asyncio
 import sys
 import threading
 from random import randint
 from time import sleep
 
+from PyQt5 import Qt
 from PyQt5.QtGui import QColor, QFont, QTextOption
 from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QHBoxLayout,
                              QHeaderView,
                              QLineEdit, QMainWindow, QPushButton,
                              QRadioButton,
-                             QTableWidget,
+                             QSizePolicy, QTableWidget,
                              QTableWidgetItem,
                              QTextEdit, QVBoxLayout, QWidget)
 
@@ -18,8 +21,10 @@ from src.modes import Mode
 from src.Robot import Robot
 
 
+# ToDo: Open Parameterisieren: Tabel Größe (X, Y) im nachhinein vergrößern
+#  oder verkleinern können -> new draw
 class MainWindow(QWidget):
-    def __init__(self, title, width, height, left=0, top=0):
+    def __init__(self, title, width, height, left=0, top=0, row=16, col=16):
         super().__init__()
         self.log = None
         self.hindernisswidth = None
@@ -33,8 +38,8 @@ class MainWindow(QWidget):
         self.height = height
         self.left = left
         self.top = top
-        self.tableColumn = 16  # create Feld
-        self.tableRow = 16  # create Feld
+        self.tableColumn = col  # create Feld default
+        self.tableRow = row  # create Feld default
         self.endPoint = (0, 0)
         self.startPoint = (0, 0)
         self.btns = []
@@ -43,6 +48,7 @@ class MainWindow(QWidget):
 
         self.setWindowTitle(self.title)
         self.setGeometry(self.left, self.top, self.width, self.height)
+        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.table(row=self.tableRow, column=self.tableColumn)  # create Feld
 
         self.randomStartPoint()  # create startPoint
@@ -74,7 +80,8 @@ class MainWindow(QWidget):
         self.log.show()
 
     def buttons(self):
-        self.btns.append(self.createButton("Show Log", self.LogViewer, (0, 200)))
+        self.btns.append(
+                self.createButton("Show Log", self.LogViewer, (0, 200)))
         self.btns.append(self.createButton("Start", self.restart, (0, 0)))
         self.btns.append(self.createButton("Automatic", self.automatic, (0,
                                                                          100)))
@@ -82,6 +89,17 @@ class MainWindow(QWidget):
                 self.createButton("Random Start/End Punkt", self.rdmStartEnd,
                                   (0, 200)))
         self.btns.append(self.createButton("Exit", self.close, (0, 200)))
+
+        resizetbllayout = QHBoxLayout()
+        rowinput = self.createInputField("Row", (0, 200),
+                                         self.setrow)
+        colinput = self.createInputField("Col", (0, 200),
+                                         self.setcol)
+        resizetbllayout.addWidget(rowinput)
+        resizetbllayout.addWidget(colinput)
+        resizetbllayout.addWidget(self.createButton("Resize Table",
+                                                    self.resizetbl, (0, 200)))
+        self.layout.addLayout(resizetbllayout)
 
         radiobtnlayout = QHBoxLayout()
 
@@ -95,6 +113,33 @@ class MainWindow(QWidget):
         radiobtnlayout.addWidget(self.createRadioButton(
                 "Find Way", self.findWayMode, (0, 400)))
         self.layout.addLayout(radiobtnlayout)
+
+    #   ToDo 7: Hindernisse einbauen
+    #     (Optional) Sowohl random als auch feste strecken
+
+    def resizetbl(self):
+        self.clearTable()
+        print("Resize Table")
+        self.table(self.tableRow, self.tableColumn)
+        self.startPoint = None
+        self.endPoint = None
+        print("Create new Startpoint")
+        self.randomStartPoint()  # create startPoint
+        print("Create new Endpoint")
+        self.randomEndPoint()  # create endPoint
+        print("Create new Robot")
+        self.robot = Robot(self.startPoint, self.endPoint,
+                           self.tbl)  # create Robot
+        print("Get Robot Pos")
+        self.robotPosition = self.robot.getPos()
+
+    def setrow(self, row):
+        if row.isdigit() and int(row) > 0:
+            self.tableRow = int(row)
+
+    def setcol(self, col):
+        if col.isdigit() and int(col) > 0:
+            self.tableColumn = int(col)
 
     def hindernissMenu(self):
         layout = QHBoxLayout()
@@ -145,6 +190,10 @@ class MainWindow(QWidget):
             radius = self.tableRow
         self.hindernissheight = int(height)
 
+    #   ToDo 7: Hindernisse einbauen
+    #     WICHTIG!! Hindernisse müssen so gebaut sein das man noch zum Ziel
+    #     kommt bei user eingabe Fehlermeldung den User geben, bei random
+    #     erneuter versuch ein Hinderniss einzubauen
     def checkHinterniss(self):
         # Check if the start or end point is in hinderniss
         if self.hindernissX is not None and self.hindernissY is not None and self.hindernisswidth is not None and self.hindernissheight is not None:
@@ -179,10 +228,19 @@ class MainWindow(QWidget):
             print("Start or End point is in hinderniss")
 
     def automatic(self):
-        self.mode = Mode.EXPLORE
-        self.restart(0)
-        self.mode = Mode.BYPOINTS
-        self.restart(0)
+        counter = self.iterations
+        counter_explore = 0
+        counter_findWay = 0
+
+        while counter_explore < counter:
+            self.mode = Mode.EXPLORE
+            self.restart(iterations=1)
+            counter_explore += 1
+
+        while counter_findWay < counter:
+            self.mode = Mode.BYPOINTS
+            self.restart(iterations=1)
+            counter_findWay += 1
 
     def explorerMode(self):
         print("Explorer Mode")
@@ -262,6 +320,7 @@ class MainWindow(QWidget):
         self.tbl.resizeRowsToContents()
 
     def run(self, delay=1 / 144):
+        cancel = False
         try:
             while self.robotPosition != self.endPoint:
                 if self.mode == Mode.EXPLORE:
@@ -269,7 +328,11 @@ class MainWindow(QWidget):
                     self.boolFindWay = True
                 elif self.mode == Mode.BYPOINTS:
                     if self.boolFindWay:
-                        self.robot.movebyPoints()
+                        try:
+                            self.robot.movebyPoints()
+                        except:
+                            cancel = True
+                            break
                     else:
                         print("Need to Explorer First!")
                         break
@@ -277,35 +340,64 @@ class MainWindow(QWidget):
                 if self.robotPosition not in self.robot.visited:
                     self.robot.visited.append(self.robotPosition)
                 self.robot.steps += 1
-                print(f"Robot Position: {self.robotPosition}")
-                print(f"Old Robot Position: {self.robot.getoldPos()}")
+                # print(f"Robot Position: {self.robotPosition}")
+                # print(f"Old Robot Position: {self.robot.getoldPos()}")
                 self.update()
                 sleep(delay)
             print(f"Robot Steps: {self.robot.steps}")
+            if cancel:
+                print(f"Robot stops at position {self.robot.getPos()}")
 
+            # ToDO: WIP ToDo 2: Punkte vergabe: wenn im Feld bereits punkte vorhanden
+            #  sind nehme den Mittelwert aus beiden Zahlen
             backvisited = self.robot.visited[::-1]
             for b in range(len(backvisited)):
-                if backvisited[b] == self.endPoint:
+                back = self.robot.visited[b]
+                if back == self.endPoint or back == self.startPoint:
                     continue
-
                 points = 0.9 ** b
-                cellPoints = 0
+
+                cellPoints = None
                 try:
-                    # get CellPoints value
-                    cellPoints = float(
-                            self.tbl.item(backvisited[b][0],
-                                          backvisited[b][1]).text())
+                    if self.mode == Mode.BYPOINTS:
+                        print(f"value of back is: {back}") # Debugging
+                        item = self.tbl.item(back[1], back[0])
+                        print(f"item: {item}")  # Debugging
+                        cP = item.text()
+                        print(f"text cP: {cP}")  # Debugging
+                        cellPoints = float(cP)
+                        print(f"cellPoints: {cellPoints}")  # Debugging
                 except:
-                    pass
-                # if cellPoints != 0
-                if cellPoints != 0:
-                    # median = (points+"cellpoints")/2
+                    cellPoints = None
+
+                # Berechnen des neuen Punktwerts für die Zelle
+                if cellPoints is not None:
+                    # median = (points + cellPoints)/2
                     median = (points + cellPoints) / 2
+                    print(f"{median} = ({points} + {cellPoints}) / 2") # Debugging
                     # points += median
                     points += median
+                    print(f"{points} += {median}") # Debugging
+                elif cellPoints == 0:
+                    points = 0
 
-                print(f"{b}: {points} bei Position:{self.robot.visited[b]}")
-                self.setPoints(points, backvisited[b])
+                if not cancel:
+                    print(f"{b}: {points} bei Position:{self.robot.visited[b]}")
+
+                # Setzen des Punktwerts in der Tabelle
+                self.setPoints(points, back)
+            for row in range(self.tableRow):
+                for column in range(self.tableColumn):
+                    cell = row, column
+                    if cell == self.startPoint or cell == self.endPoint:
+                        continue
+                    else:
+                        pass
+                    try:
+                        item = self.tbl.item(row, column)
+                        float(item.text())
+                    except:
+                        self.tbl.setItem(row, column, QTableWidgetItem("-1"))
                 self.update(end=True)
         except Exception as e:
             print(e)
@@ -323,9 +415,10 @@ class MainWindow(QWidget):
                 except:
                     pass
 
-    def restart(self, delay=1 / 144):
+    def restart(self, delay=1 / 144, iterations=None):
         self.LogViewer()
-        for _ in range(0, self.iterations):
+        for _ in range(0,
+                       self.iterations if iterations is None else iterations):
             for x in range(self.tableRow):
                 for y in range(self.tableColumn):
                     try:
@@ -382,3 +475,12 @@ class MainWindow(QWidget):
                            QColor(0, 255, 0), "S", alpha=255)
             self.paintCell(self.endPoint[0], self.endPoint[1],
                            QColor(255, 0, 0), "E", alpha=255)
+
+    def showEvent(self, event) -> None:
+        size = self.sizeHint()
+        tblSize = self.tbl.sizeHint()
+        width = size.width() + tblSize.width()
+        height = size.height() + tblSize.height() + 50
+        size.setWidth(width)
+        size.setHeight(height)
+        self.resize(size)
