@@ -19,14 +19,12 @@ from PyQt5.QtWidgets import (QAbstractItemView, QApplication, QHBoxLayout,
 from src.Log import LogWindow
 from src.modes import Mode
 from src.Robot import Robot
-
-
-# ToDo: Open Parameterisieren: Tabel Größe (X, Y) im nachhinein vergrößern
-#  oder verkleinern können -> new draw
 class MainWindow(QWidget):
-    def __init__(self, title, width, height, left=0, top=0, row=16, col=16):
+    def __init__(self, title, width, height, left=0, top=0, row=16, col=16,
+                 hz=60):
         super().__init__()
         self.log = None
+        self.refreshrate = hz
         self.hindernisswidth = None
         self.hindernissheight = None
         self.hindernissY = None
@@ -234,12 +232,12 @@ class MainWindow(QWidget):
 
         while counter_explore < counter:
             self.mode = Mode.EXPLORE
-            self.restart(iterations=1)
+            self.restart(iterations=1, delay=1/self.refreshrate)
             counter_explore += 1
 
         while counter_findWay < counter:
             self.mode = Mode.BYPOINTS
-            self.restart(iterations=1)
+            self.restart(iterations=1, delay=1/self.refreshrate)
             counter_findWay += 1
 
     def explorerMode(self):
@@ -273,7 +271,7 @@ class MainWindow(QWidget):
         success = False
         while not success:
             try:
-                self.startPoint = (row, column)
+                self.startPoint = (column, row)
 
                 self.tbl.setItem(row, column, QTableWidgetItem("Start"))
                 self.tbl.item(row, column).setBackground(QColor(0, 255, 0))
@@ -291,7 +289,7 @@ class MainWindow(QWidget):
         # check if End Point is not Start Point
         while not success:
             try:
-                self.endPoint = (row, column)
+                self.endPoint = (column, row)
                 self.tbl.setItem(row, column, QTableWidgetItem("End"))
                 self.tbl.item(row, column).setBackground(QColor(255, 0, 0))
                 success = True
@@ -415,7 +413,8 @@ class MainWindow(QWidget):
                 except:
                     pass
 
-    def restart(self, delay=1 / 144, iterations=None):
+    def restart(self, delay=1 / 60, iterations=None):
+        delay = 1/self.refreshrate
         self.LogViewer()
         for _ in range(0,
                        self.iterations if iterations is None else iterations):
@@ -467,6 +466,13 @@ class MainWindow(QWidget):
                     oldcolor = None
                 self.paintCell(i[0], i[1], QColor(0, 0, 255, 1), "", oldcolor,
                                1)
+            self.robotPosition = self.robot.getPos()
+            try:
+                self.tbl.item(self.robotPosition[0], self.robotPosition[
+                    1]).background()
+            except AttributeError:
+                self.tbl.setItem(self.robotPosition[0], self.robotPosition[
+                    1], QTableWidgetItem(""))
             alpha = self.tbl.item(self.robotPosition[0], self.robotPosition[
                 1]).background().color().alpha()
             self.paintCell(self.robotPosition[0], self.robotPosition[1],

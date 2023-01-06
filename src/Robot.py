@@ -1,7 +1,6 @@
+from collections import deque
 from math import sqrt
 from random import randint
-from PyQt5.QtGui import QColor
-from src.modes import Mode
 
 
 class Robot:
@@ -13,10 +12,7 @@ class Robot:
         self.endPoint = endPoint
         self.table = table
         self.oldPos = None
-        self.oldPositons = []
-
-    def getMode(self):
-        return self.mode
+        self.oldPositions = deque(maxlen=3)
 
     def move(self, direction):
         self.oldPos = self.getPos()
@@ -35,9 +31,6 @@ class Robot:
             self.oldPositons[2] = self.getPos()
         else:
             self.oldPositons.append(self.getPos())
-
-    def setMode(self, mode: Mode):
-        self.mode = mode
 
     def getPos(self):
         return self.x, self.y
@@ -96,12 +89,7 @@ class Robot:
                 if self.table.item(neighbour[0],
                                    neighbour[1]).background() == "#ffffff":
                     neighbours.remove(neighbour)
-                # else:
-                #     self.table.item(neighbour[0],
-                #                     neighbour[1]).setBackground(QColor(255,
-                #                                                        165,
-                #                                                        0, 50))
-            except:
+            except AttributeError:
                 pass
         print(f"Neighbours: {neighbours}")
         # get points of neighbours
@@ -123,9 +111,6 @@ class Robot:
         maxPoint = max(points)
         # get cell of max point
         cell = neighbours[points.index(maxPoint)]
-        # self.table.item(cell[0], cell[1]).setBackground(QColor(255,
-        #                                                        165,
-        #                                                        0))
         # check where to move
         if cell[0] > self.x and not self.checkhinderniss("right"):
             self.move("right")
