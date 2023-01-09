@@ -7,7 +7,7 @@ from src.Graphical import MainWindow
 if __name__ == '__main__':
     app = QApplication(sys.argv)
     refreshrate = app.primaryScreen().refreshRate()
-    window = MainWindow(title='tbl', width=900, height=800, hz=refreshrate)
+    window = MainWindow(title='tbl', width=900, height=800)
     window.show()
     sys.exit(app.exec_())
 
