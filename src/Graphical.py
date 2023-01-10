@@ -2,7 +2,7 @@ from random import randint
 from time import sleep
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor, QFont, QTextCharFormat
+from PyQt5.QtGui import QColor, QFont, QPalette, QTextCharFormat
 from PyQt5.QtWidgets import (QAbstractItemView, QHBoxLayout,
                              QLineEdit, QMainWindow, QPushButton,
                              QRadioButton,
@@ -42,6 +42,8 @@ class MainWindow(QMainWindow):
         self.table(row=self.tableRow, column=self.tableColumn)  # create Feld
         self.tbl.setSelectionMode(QAbstractItemView.ContiguousSelection)
         self.tbl.selectionModel().selectionChanged.connect(self.onCellClicked)
+        self.tbl.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.tbl.customContextMenuRequested.connect(self.onCellRightClicked)
 
         self.randomStartPoint()  # create startPoint
         self.randomEndPoint()  # create endPoint
@@ -105,10 +107,60 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.createRadioButton("Find Way",
                                                 self.findWayMode, (0, 1)))
 
+        resizeTableLayout = QHBoxLayout()
+
+        def setRows(value):
+            try:
+                self.tableRow = int(value)
+            except ValueError:
+                self.log("Error: ", Qt.red)
+                self.log(f"'{value}' als Zeilenanzahl ist ungültig.\n")
+
+        resizeTableLayout.addWidget(
+                self.createInputField(
+                        "Rows", (0, 300), setRows
+                )
+        )
+
+        def setCols(value):
+            try:
+                self.tableColumn = int(value)
+            except ValueError:
+                self.log("Error: ", Qt.red)
+                self.log(f"'{value}' als Spaltenanzahl ist ungültig.\n")
+
+        resizeTableLayout.addWidget(
+                self.createInputField(
+                        "Columns", (0, 300), setCols
+                )
+        )
+
+        def resizeTable():
+            self.tbl.setRowCount(self.tableRow)
+            self.tbl.setColumnCount(self.tableColumn)
+            self.tbl.setHorizontalHeaderLabels([str(i) for i in range(
+                    self.tableColumn)])
+            self.tbl.setVerticalHeaderLabels(
+                    [str(i) for i in range(self.tableRow)])
+            self.tbl.resizeColumnsToContents()
+            self.tbl.resizeRowsToContents()
+            self.tbl.move(0, 0)
+            self.tbl.repaint()
+
+        resizeTableLayout.addWidget(
+                self.createButton(
+                        "Resize", resizeTable, (0, 300)
+                )
+        )
+
+        resizeTableWidget = QWidget()
+        resizeTableWidget.setLayout(resizeTableLayout)
+
         widget.setLayout(layout)
 
         # Add the widget to the tool bar
         self.toolbar.addWidget(widget)
+        self.toolbar.addWidget(resizeTableWidget)
 
         # Set the orientation of the toolbar to be vertical
         self.toolbar.setOrientation(Qt.Vertical)
@@ -118,8 +170,23 @@ class MainWindow(QMainWindow):
 
     def initLog(self):
         self.logViewer.setFixedHeight(self.size().height())
-        self.logtoolbar.addWidget(self.logViewer)
+        themeButton = QPushButton("Switch Background Color")
 
+        def toggleBackgroundColor():
+            palette = self.logViewer.palette()
+            _, _, v, _ = palette.color(QPalette.Base).getHsv()
+            if v > 0.5:
+                palette.setColor(QPalette.Base, Qt.black)
+            else:
+                palette.setColor(QPalette.Base, Qt.white)
+            self.logViewer.setPalette(palette)
+
+        themeButton.clicked.connect(toggleBackgroundColor)
+
+        self.logtoolbar.addWidget(self.logViewer)
+        self.logtoolbar.addWidget(themeButton)
+
+    # ToDo: Fix it
     def log(self, info, color=Qt.white, bold=False):
         charFormat = QTextCharFormat()
         charFormat.setFontPointSize(10)
@@ -139,7 +206,6 @@ class MainWindow(QMainWindow):
                     self.logtoolbar.width(),
                     max(self.tbl.height(), self.toolbar.height(),
                         self.logtoolbar.height()))
-        self.update()
 
     def buttons(self):
         self.btns.append(self.createButton("Start", self.restart, (0, 0)))
@@ -169,25 +235,39 @@ class MainWindow(QMainWindow):
         er, ec = self.endPoint
         for cell in selected.indexes():
             if self.istPathClear(sr, sc, er, ec):
+                if cell == self.startPoint or cell == self.endPoint:
+                    continue
                 row, col = cell.row(), cell.column()
                 self.painted.append((row, col))
                 self.tbl.setItem(row, col, QTableWidgetItem("X"))
                 self.tbl.item(row, col).setBackground(QColor("#ffff00"))
                 self.tbl.item(row, col).setSelected(False)
+                self.tbl.repaint()
             else:
                 self.log("Error: ", Qt.red)
                 self.log("Roboter kann nicht das Ziel erreichen!\n")
-                row, col = self.painted.pop()
-                self.tbl.item(row, col).setBackground(QColor('transparent'))
-                self.tbl.item(row, col).setText("")
-                self.tbl.item(row, col).setSelected(False)
+        while not self.istPathClear(sr, sc, er, ec):
+            row, col = self.painted.pop()
+            self.tbl.item(row, col).setBackground(Qt.transparent)
+            self.tbl.item(row, col).setText("")
+            self.tbl.item(row, col).setSelected(False)
+            self.tbl.repaint()
 
+    def onCellRightClicked(self, pos):
+        index = self.tbl.indexAt(pos)
+        if index.isValid():
+            row, col = index.row(), index.column()
+            if (row, col) in self.painted:
+                self.tbl.item(row, col).setText("")
+                self.tbl.item(row, col).setBackground(Qt.transparent)
+                self.painted.remove((row, col))
+                self.tbl.repaint()
 
     def istPathClear(self, startRow, startCol, endRow, endCol):
         visited = set()
 
         def dfs(row, col):
-            if(row, col) == (endRow, endCol):
+            if (row, col) == (endRow, endCol):
                 return True
             try:
                 if (row, col) in visited or self.tbl.item(row, col).background(
@@ -299,54 +379,80 @@ class MainWindow(QMainWindow):
         self.tbl.resizeRowsToContents()
 
     def run(self, delay=1 / 144):
-        while self.robotPosition != self.endPoint:
-            if self.mode == Mode.EXPLORE:
-                self.robot.randomMove()
-                self.boolFindWay = True
-            elif self.mode == Mode.BYPOINTS:
-                if self.boolFindWay:
-                    self.robot.movebyPoints()
-                else:
-                    print("Need to Explorer First!")
-                    break
-            self.robotPosition = self.robot.getPos()
-            if self.robotPosition not in self.robot.visited:
-                self.robot.visited.append(self.robotPosition)
-            self.robot.steps += 1
-            self.log("Robot Position:", Qt.cyan, bold=True)
-            self.log(f" {self.robotPosition}\n")
-            self.update()
-            sleep(delay)
-        self.log("Robot Steps:", Qt.green, bold=True)
-        self.log(f"{self.robot.steps}\n")
+        cancel = False
+        try:
+            while self.robotPosition != self.endPoint:
+                if self.mode == Mode.EXPLORE:
+                    self.robot.randomMove()
+                    self.boolFindWay = True
+                elif self.mode == Mode.BYPOINTS:
+                    if self.boolFindWay:
+                        try:
+                            self.robot.movebyPoints()
+                        except:
+                            cancel = True
+                            break
+                    else:
+                        print("Need to Explorer First!")
+                        break
+                self.robotPosition = self.robot.getPos()
+                if self.robotPosition not in self.robot.visited:
+                    self.robot.visited.append(self.robotPosition)
+                self.robot.steps += 1
+                self.update()
+                sleep(delay)
 
-        backvisited = self.robot.visited[::-1]
-        for b in range(len(backvisited)):
-            if backvisited[b] == self.endPoint:
-                continue
+                # # looging
+                self.log("Robot Position:", Qt.cyan, bold=True)
+                self.log(f" {self.robotPosition}\n")
 
-            points = 0.9 ** b
-            cellPoints = 0
-            try:
-                # get CellPoints value
-                cellPoints = float(
-                        self.tbl.item(backvisited[b][0],
-                                      backvisited[b][1]).text())
-            except:
-                pass
-            # if cellPoints != 0
-            if cellPoints != 0:
-                # median = (points+"cellpoints")/2
-                median = (points + cellPoints) / 2
-                # points += median
-                points += median
+            if cancel:
+                print(f"Robot stops at position {self.robot.getPos()}")
 
-            self.log(f"{b}:", Qt.yellow)
-            self.log(f" {points:.2e} ", Qt.magenta, bold=True)
-            self.log("Punkte bei Position:"
-                     f" {self.robot.visited[b]}\n")
-            self.setPoints(points, backvisited[b])
-            self.update(end=True)
+            # # looging
+            self.log("Robot Steps:", Qt.green, bold=True)
+            self.log(f"{self.robot.steps}\n")
+
+            backvisited = self.robot.visited[::-1]
+            for b in range(len(backvisited)):
+                back = backvisited[b]
+                if back == self.endPoint or back == self.startPoint:
+                    continue
+
+                points = 0.9 ** b
+                cellPoints = None
+                try:
+                    if self.mode == Mode.BYPOINTS:
+                        item = self.tbl.item(back[1], back[0])
+                        cP = item.text()
+                        cellPoints = float(cP)
+                except:
+                    cellPoints = None
+
+                # Berechnen des neuen Punktwerts für die Zelle
+                if cellPoints is not None:
+                    # median = (points + cellPoints)/2
+                    median = (points + cellPoints) / 2
+                    # points += median
+                    points += median
+                elif cellPoints == 0:
+                    points = 0
+
+                if not cancel:
+                    print(f"{b}: {points} bei Position:{self.robot.visited[b]}")
+
+                # # logging
+                self.log(f"{b}:", Qt.yellow)
+                self.log(f" {points:.2e} ", Qt.magenta, bold=True)
+                self.log("Punkte bei Position:"
+                         f" {self.robot.visited[b]}\n")
+
+                # Setzen des Punktwerts in der Tabelle
+                self.setPoints(points, back)
+        except Exception as e:
+            print(e)
+
+
 
     def clearTable(self):
         for row in range(self.tbl.rowCount()):
@@ -360,6 +466,7 @@ class MainWindow(QMainWindow):
                             QColor('transparent'))
                 except:
                     pass
+
 
     def restart(self, delay=1 / 144):
         for _ in range(0, self.iterations):
@@ -378,17 +485,20 @@ class MainWindow(QMainWindow):
             self.update()
             self.run(delay)
 
+
     def createButton(self, name, function, position):
         button = QPushButton(name, self)
         button.move(position[0], position[1])
         button.clicked.connect(function)
         return button
 
+
     def createRadioButton(self, name, function, position):
         radio = QRadioButton(name, self)
         radio.move(position[0], position[1])
         radio.clicked.connect(function)
         return radio
+
 
     def createInputField(self, name, position, function):
         inputbox = QLineEdit(self)
@@ -397,11 +507,13 @@ class MainWindow(QMainWindow):
         inputbox.textChanged.connect(function)
         return inputbox
 
+
     def setIterations(self, value):
         print("Changed to: " + value)
         if value == "":
             value = 1
         self.iterations = int(value)
+
 
     def update(self, end=False) -> None:
         super().update()
