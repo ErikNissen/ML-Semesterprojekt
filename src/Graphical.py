@@ -102,8 +102,10 @@ class MainWindow(QMainWindow):
         layout.addWidget(
                 self.createInputField("Iteration", (0, 300),
                                       self.setIterations))
-        layout.addWidget(self.createRadioButton("Explorer",
-                                                self.explorerMode, (0, 0)))
+        exploreButton = self.createRadioButton("Explorer",
+                                               self.explorerMode, (0, 0))
+        exploreButton.setChecked(True)
+        layout.addWidget(exploreButton)
         layout.addWidget(self.createRadioButton("Find Way",
                                                 self.findWayMode, (0, 1)))
 
@@ -146,6 +148,7 @@ class MainWindow(QMainWindow):
             self.tbl.resizeRowsToContents()
             self.tbl.move(0, 0)
             self.tbl.repaint()
+            self.rdmStartEnd()
 
         resizeTableLayout.addWidget(
                 self.createButton(
@@ -186,7 +189,6 @@ class MainWindow(QMainWindow):
         self.logtoolbar.addWidget(self.logViewer)
         self.logtoolbar.addWidget(themeButton)
 
-    # ToDo: Fix it
     def log(self, info, color=Qt.white, bold=False):
         charFormat = QTextCharFormat()
         charFormat.setFontPointSize(10)
@@ -206,37 +208,15 @@ class MainWindow(QMainWindow):
                     self.logtoolbar.width(),
                     max(self.tbl.height(), self.toolbar.height(),
                         self.logtoolbar.height()))
-
-    def buttons(self):
-        self.btns.append(self.createButton("Start", self.restart, (0, 0)))
-        self.btns.append(self.createButton("Automatic", self.automatic, (0,
-                                                                         100)))
-        self.btns.append(
-                self.createButton("Random Start/End Punkt", self.rdmStartEnd,
-                                  (0, 200)))
-        self.btns.append(self.createButton("Exit", self.close, (0, 200)))
-
-        radiobtnlayout = QHBoxLayout()
-
-        explore = self.createRadioButton(
-                "Explorer", self.explorerMode, (0, 200))
-        explore.setChecked(True)
-        iteration = self.createInputField("Iteration", (0, 300),
-                                          self.setIterations)
-        radiobtnlayout.addWidget(iteration)
-        radiobtnlayout.addWidget(explore)
-        radiobtnlayout.addWidget(self.createRadioButton(
-                "Find Way", self.findWayMode, (0, 400)))  # "Find Way" kann
-        # nur benutzt werden, wenn mindestens 1 Explor gemacht wurde
-        self.layout.addLayout(radiobtnlayout)
+        self.update(end=True)
 
     def onCellClicked(self, selected, _):
         sr, sc = self.startPoint
         er, ec = self.endPoint
         for cell in selected.indexes():
+            if cell == self.startPoint or cell == self.endPoint:
+                continue
             if self.istPathClear(sr, sc, er, ec):
-                if cell == self.startPoint or cell == self.endPoint:
-                    continue
                 row, col = cell.row(), cell.column()
                 self.painted.append((row, col))
                 self.tbl.setItem(row, col, QTableWidgetItem("X"))
@@ -313,7 +293,13 @@ class MainWindow(QMainWindow):
     def table(self, row, column):  # create Feld
         self.tbl.setRowCount(row)
         self.tbl.setColumnCount(column)
+        self.tbl.horizontalHeader().setStyleSheet("QHeaderView::section { "
+                                                  "background-color: "
+                                                  "orange; color: blue;}")
         self.tbl.setHorizontalHeaderLabels([str(i) for i in range(column)])
+        self.tbl.verticalHeader().setStyleSheet("QHeaderView::section { "
+                                                "background-color: cyan; "
+                                                "color: #8B0000}")
         self.tbl.setVerticalHeaderLabels([str(i) for i in range(row)])
         self.tbl.resizeColumnsToContents()
         self.tbl.resizeRowsToContents()
@@ -404,7 +390,8 @@ class MainWindow(QMainWindow):
 
                 # # looging
                 self.log("Robot Position:", Qt.cyan, bold=True)
-                self.log(f" {self.robotPosition}\n")
+                self.log(f" R{self.robotPosition[0]} ", QColor("#ffa500"))
+                self.log(f"C{self.robotPosition[1]}\n", Qt.cyan)
 
             if cancel:
                 print(f"Robot stops at position {self.robot.getPos()}")
@@ -444,9 +431,10 @@ class MainWindow(QMainWindow):
                 # # logging
                 self.log(f"{b}:", Qt.yellow)
                 self.log(f" {points:.2e} ", Qt.magenta, bold=True)
-                self.log("Punkte bei Position:"
-                         f" {self.robot.visited[b]}\n")
-
+                row, col = self.robot.visited[b]
+                self.log("Punkte bei Position: ")
+                self.log(f"R{row} ", QColor("#ffa500"))
+                self.log(f"C{col}\n", Qt.cyan)
                 # Setzen des Punktwerts in der Tabelle
                 self.setPoints(points, back)
         except Exception as e:
