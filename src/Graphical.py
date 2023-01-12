@@ -137,6 +137,7 @@ class MainWindow(QMainWindow):
                 )
         )
 
+        # Erstelle Tablle mit benutzerdefinierten Spalten und Zeilen
         def resizeTable():
             self.tbl.setRowCount(self.tableRow)
             self.tbl.setColumnCount(self.tableColumn)
@@ -210,6 +211,7 @@ class MainWindow(QMainWindow):
                         self.logtoolbar.height()))
         self.update(end=True)
 
+    # mit MB1 kann Hinderniss erstellt werden
     def onCellClicked(self, selected, _):
         sr, sc = self.startPoint
         er, ec = self.endPoint
@@ -233,6 +235,7 @@ class MainWindow(QMainWindow):
             self.tbl.item(row, col).setSelected(False)
             self.tbl.repaint()
 
+    # mit MB2 kann Hinderniss entfernt werden
     def onCellRightClicked(self, pos):
         index = self.tbl.indexAt(pos)
         if index.isValid():
@@ -243,22 +246,29 @@ class MainWindow(QMainWindow):
                 self.painted.remove((row, col))
                 self.tbl.repaint()
 
+    # Prüft, ob man vom Start Punkt immer noch zum Endpunkt kommen kann wenn
+    # nicht wird eine Hinderniss Zelle entfernt
     def istPathClear(self, startRow, startCol, endRow, endCol):
+        # Set, um besuchte Positionen zu speichern
         visited = set()
 
         def dfs(row, col):
+            # Basisfall: Wenn die aktuelle Position die Zielposition ist, gib true zurück
             if (row, col) == (endRow, endCol):
                 return True
-            try:
-                if (row, col) in visited or self.tbl.item(row, col).background(
 
-                ).color().name() == "#ffff00":
+            try:
+                # Wenn die aktuelle Position bereits besucht wurde oder eine
+                # Hintergrundfarbe von gelb hat, gib false zurück
+                if (row, col) in visited or self.tbl.item(row, col).background().color().name() == "#ffff00":
                     return False
             except AttributeError:
                 pass
 
+            # Markiere die aktuelle Position als besucht
             visited.add((row, col))
 
+            # Rufe die Funktion rekursiv für die Positionen über, unter, links und rechts der aktuellen Position auf
             if row > 0:
                 if dfs(row - 1, col):
                     return True
@@ -272,9 +282,13 @@ class MainWindow(QMainWindow):
                 if dfs(row, col + 1):
                     return True
 
+            # Wenn kein Aufruf true zurückgibt, gib false zurück
             return False
 
+        # Initialer Aufruf, um die DFS-Algorithmus zu starten
         return dfs(startRow, startCol)
+
+
 
     def automatic(self):
         self.mode = Mode.EXPLORE
@@ -355,23 +369,37 @@ class MainWindow(QMainWindow):
     def setPoints(self, value, cell):
         # format value to #.##e+00
         value = f"{value:.2e}"
+        # schreibe value in Zelle
         self.tbl.item(cell[0], cell[1]).setText(value)
+        # reset Hintergrundsfarbe
         self.tbl.item(cell[0], cell[1]).setBackground(QColor('transparent'))
         self.tbl.item(self.endPoint[0], self.endPoint[1]).setBackground(
                 QColor(255, 0, 0))
         self.tbl.item(self.startPoint[0], self.startPoint[1]).setBackground(
                 QColor(0, 255, 0))
+        # ändert bei zu großen Zahlen die Schriftgröße in den Zellen
         self.tbl.resizeColumnsToContents()
         self.tbl.resizeRowsToContents()
 
+    """
+        Die Methode run ist die Hauptschleife des Programms und steuert den Bewegungsablauf des Robots. 
+        Sie verwendet eine while-Schleife, die solange läuft, bis der Roboter seinen Endpunkt erreicht hat.
+    """
     def run(self, delay=1 / 144):
         cancel = False
         try:
+            # Der Roboter wird solange bewegt, bis er sein Ziel erreicht hat.
             while self.robotPosition != self.endPoint:
+                # Überprüfung ob der Modus "EXPLORE" oder "BYPOINTS" aktiviert ist.
                 if self.mode == Mode.EXPLORE:
+                    # Wenn "EXPLORE" aktiviert ist, wird der Roboter
+                    # zufällig bewegt und der bool "FindWay" auf true gesetzt.
                     self.robot.randomMove()
                     self.boolFindWay = True
                 elif self.mode == Mode.BYPOINTS:
+                    # Wenn "BYPOINTS" aktiviert ist und boolFindWay true ist,
+                    # bewegt sich der Roboter aufgrund der erhaltenen Punkte,
+                    # ansonsten wird eine Fehlermeldung ausgegeben und die Schleife beendet.
                     if self.boolFindWay:
                         try:
                             self.robot.movebyPoints()
@@ -381,46 +409,60 @@ class MainWindow(QMainWindow):
                     else:
                         print("Need to Explorer First!")
                         break
+                # Aktualisiere die Position des Roboters.
                 self.robotPosition = self.robot.getPos()
                 if self.robotPosition not in self.robot.visited:
+                    # Falls die Position des Roboters noch nicht in visited
+                    # ist, füge diese hinzu.
                     self.robot.visited.append(self.robotPosition)
+
                 self.robot.steps += 1
+                # Aktualisiere die GUI
                 self.update()
+                # Wartet eine kurze Zeit (in ms) bevor ein weiteren Schritt macht.
                 sleep(delay)
 
-                # # looging
+                # logging
                 self.log("Robot Position:", Qt.cyan, bold=True)
                 self.log(f" R{self.robotPosition[0]} ", QColor("#ffa500"))
                 self.log(f"C{self.robotPosition[1]}\n", Qt.cyan)
 
             if cancel:
-                print(f"Robot stops at position {self.robot.getPos()}")
+                # Falls der Roboter in einer Endlosschleife ist, informiere
+                # den Nutzer.
+                self.log(f"Robot stops at position {self.robot.getPos()}\n",
+                         Qt.red)
 
-            # # looging
+            # logging
             self.log("Robot Steps:", Qt.green, bold=True)
             self.log(f"{self.robot.steps}\n")
 
+            # Invertiere die visited liste für die Punktevergabe.
             backvisited = self.robot.visited[::-1]
+            # b = Schritt zähler
             for b in range(len(backvisited)):
+                # back = position zu dem entsprechnden schritt
                 back = backvisited[b]
                 if back == self.endPoint or back == self.startPoint:
+                    # Wenn die aktuelle Position der Start/Endpunkt ist,
+                    # überspringe diese.
                     continue
 
+                # Kalkuliere die Punktzahl des aktuellen Feldes.
                 points = 0.9 ** b
                 cellPoints = None
                 try:
                     if self.mode == Mode.BYPOINTS:
-                        item = self.tbl.item(back[1], back[0])
-                        cP = item.text()
-                        cellPoints = float(cP)
+                        # Falls der Modus "BYPOINTS" ist und das aktuelle
+                        # Feld eine Punktzahl hat, speichere diese in
+                        # cellPoints.
+                        cellPoints = float(self.tbl.item(back[1], back[0]).text())
                 except:
                     cellPoints = None
 
                 # Berechnen des neuen Punktwerts für die Zelle
                 if cellPoints is not None:
-                    # median = (points + cellPoints)/2
                     median = (points + cellPoints) / 2
-                    # points += median
                     points += median
                 elif cellPoints == 0:
                     points = 0
@@ -435,12 +477,11 @@ class MainWindow(QMainWindow):
                 self.log("Punkte bei Position: ")
                 self.log(f"R{row} ", QColor("#ffa500"))
                 self.log(f"C{col}\n", Qt.cyan)
+
                 # Setzen des Punktwerts in der Tabelle
                 self.setPoints(points, back)
         except Exception as e:
             print(e)
-
-
 
     def clearTable(self):
         for row in range(self.tbl.rowCount()):
@@ -508,6 +549,8 @@ class MainWindow(QMainWindow):
         self.repaint()
         if not end:
             for i in self.robot.visited:
+                if self.mode == Mode.BYPOINTS:
+                    continue
                 # get color of cell
                 try:
                     oldcolor = self.tbl.item(i[0], i[1]).background().color()
@@ -517,8 +560,13 @@ class MainWindow(QMainWindow):
                                1)
             alpha = self.tbl.item(self.robotPosition[0], self.robotPosition[
                 1]).background().color().alpha()
-            self.paintCell(self.robotPosition[0], self.robotPosition[1],
-                           QColor(255, 255, 0), "R", alpha=alpha)
+            if self.mode == Mode.BYPOINTS:
+                self.paintCell(self.robotPosition[0], self.robotPosition[1],
+                               QColor(255,215,0),
+                               alpha=255)
+            else:
+                self.paintCell(self.robotPosition[0], self.robotPosition[1],
+                               QColor(255, 255, 0), "R", alpha=alpha)
             self.paintCell(self.startPoint[0], self.startPoint[1],
                            QColor(0, 255, 0), "S", alpha=255)
             self.paintCell(self.endPoint[0], self.endPoint[1],

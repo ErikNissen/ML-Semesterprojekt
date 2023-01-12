@@ -17,7 +17,7 @@ class Robot:
         self.oldPos = None
         self.oldPositions = []
 
-    def checkHinderniss(self, direction):
+    def checkHindernis(self, direction):
         row, col = self.getPos()
         if direction == "up":
             col -= 1
@@ -51,6 +51,7 @@ class Robot:
             self.oldPositions[1] = self.oldPositions[2]
             self.oldPositions[2] = self.getPos()
         else:
+            self.visited.append(self.getPos())
             self.oldPositions.append(self.getPos())
 
     def getPos(self):
@@ -73,89 +74,107 @@ class Robot:
         if self.oldPos is None:
             self.oldPos = self.getPos()
         neighbours = []
+        # Sammle die Informatioen der Nachbarzellen.
         if self.x > 0:
-            # right
+            # rechts
             neighbours.append((self.x - 1, self.y))
         if self.x < self.table.rowCount() - 1:
-            # left
+            # links
             neighbours.append((self.x + 1, self.y))
         if self.y > 0:
-            # up
+            # hoch
             neighbours.append((self.x, self.y - 1))
         if self.y < self.table.columnCount() - 1:
-            # down
+            # runter
             neighbours.append((self.x, self.y + 1))
-        # Remove all cells with background color white
-        for neighbour in neighbours:
-            try:
-                if self.table.item(neighbour[0],
-                                   neighbour[1]).background() == "#ffffff":
-                    neighbours.remove(neighbour)
-            except AttributeError:
-                pass
+
         print(f"Neighbours: {neighbours}")
         # get points of neighbours
         points = []
+        # Füge alle Punkte der Nachbarn in eine Liste ein
         for n in neighbours:
             try:
                 pointvalue = self.table.item(n[0], n[1]).text()
                 if pointvalue == "E":
+                    # Falls die Zelle der Endpunkt ist, setze die Punktzahl
+                    # auf 1.
                     pointvalue = 1
                 elif pointvalue == "S":
-                    pointvalue = -1
+                    # Wenn die Zelle der Startpunkt ist, setze die Punktzahl
+                    # auf 0.
+                    pointvalue = 0
                 pointvalue = float(pointvalue)
             except:
                 pointvalue = 0
-            # convert #.##e+00 to float
             print(f"Point: {pointvalue}")
             points.append(pointvalue)
-        # get max point
+
+        # Finde die höchste Punktzahl
         maxPoint = max(points)
-        # get cell of max point
+        # Wähle die Zelle aus, welche die höchste Punktzahl hat.
         cell = neighbours[points.index(maxPoint)]
-        # check where to move
-        if cell[0] > self.x and not self.checkHinderniss("right"):
+
+        # Bewege den Roboter zur ausgewählten Zelle hin.
+        if cell[0] > self.x and not self.checkHindernis("right"):
             self.move("right")
-        elif cell[0] < self.x and not self.checkHinderniss("left"):
+        elif cell[0] < self.x and not self.checkHindernis("left"):
             self.move("left")
-        elif cell[1] > self.y and not self.checkHinderniss("down"):
+        elif cell[1] > self.y and not self.checkHindernis("down"):
             self.move("down")
-        elif cell[1] < self.y and not self.checkHinderniss("up"):
+        elif cell[1] < self.y and not self.checkHindernis("up"):
             self.move("up")
         if len(self.oldPositions) >= 3 and self.isStuck():
-            print("Stuck")
-            #raise Exception("Stuck")
+            # Wenn der Roboter innerhalb von drei Schritten nicht
+            # weiterkommt, informiere den Nutzer
+            raise Exception("Stuck")
 
     def randomMove(self):
         moved = False
+        # Prüfe ob End Punkt sich in 1 Feld entfernung befindet
         distancetoendPoint = self.distance(self.endPoint)
+        # Wird solange augeführt bis Robot ein Schritt gemacht hat
         while not moved:
+            # Wird ausgeführt, wenn end Punkt sich 1 Feld entfernt befindet
             if distancetoendPoint == 1:
+                # rechts
                 if self.x < self.endPoint[0]:
                     self.move("right")
+                # links
                 elif self.x > self.endPoint[0]:
                     self.move("left")
+                # runter
                 elif self.y < self.endPoint[1]:
                     self.move("down")
+                # hoch
                 elif self.y > self.endPoint[1]:
                     self.move("up")
                 moved = True
+            # Geht einen random Schritt
             else:
+                # Generieren random Zahl für Richtung
                 direction = randint(0, 3)
-                if direction == 0 and self.y > 0 and not self.checkHinderniss(
+
+                # Wenn die Zelle, zu der der Roboter gehen soll,
+                # kein Hindernis ist, bewegt sich der Roboter dorthin.
+
+                # hoch
+                if direction == 0 and self.y > 0 and not self.checkHindernis(
                         "up"):
                     moved = True
                     self.move("up")
+                # runter
                 elif direction == 1 and self.y < 15 and not \
-                        self.checkHinderniss(
+                        self.checkHindernis(
                                 "down"):
                     moved = True
                     self.move("down")
-                elif direction == 2 and self.x > 0 and not self.checkHinderniss(
+                # links
+                elif direction == 2 and self.x > 0 and not self.checkHindernis(
                         "left"):
                     moved = True
                     self.move("left")
-                elif direction == 3 and self.x < 15 and not self.checkHinderniss(
+                # rechts
+                elif direction == 3 and self.x < 15 and not self.checkHindernis(
                         "right"):
                     moved = True
                     self.move("right")
