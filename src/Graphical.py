@@ -530,7 +530,6 @@ class MainWindow(QMainWindow):
 
 
     def setIterations(self, value: str):
-        print("Changed to: " + value)
         if value == "":
             value = 1
         elif not value.isdigit():
@@ -538,6 +537,7 @@ class MainWindow(QMainWindow):
         elif int(value) <= 0:
             value = 1
         else:
+            print("Changed to: " + value)
             self.iterations = int(value)
 
 
