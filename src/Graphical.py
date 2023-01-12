@@ -460,9 +460,6 @@ class MainWindow(QMainWindow):
                 elif cellPoints == 0:
                     points = 0
 
-                if not cancel:
-                    print(f"{b}: {points} bei Position:{self.robot.visited[b]}")
-
                 # # logging
                 self.log(f"{b}:", Qt.yellow)
                 self.log(f" {points:.2e} ", Qt.magenta, bold=True)
