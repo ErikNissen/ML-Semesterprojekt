@@ -1,9 +1,5 @@
-from collections import deque
 from math import sqrt
 from random import randint
-
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QColor
 
 
 class Robot:

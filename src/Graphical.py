@@ -537,11 +537,14 @@ class MainWindow(QMainWindow):
         return inputbox
 
 
-    def setIterations(self, value):
+    def setIterations(self, value: str):
         print("Changed to: " + value)
-        if value == "":
+        if value == "" or value <= 0:
             value = 1
-        self.iterations = int(value)
+        elif not value.isdigit():
+            self.log(f"Error: {value} ist keine Zahl.\n", Qt.red)
+        else:
+            self.iterations = int(value)
 
 
     def update(self, end=False) -> None:
