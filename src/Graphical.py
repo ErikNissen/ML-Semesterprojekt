@@ -191,6 +191,7 @@ class MainWindow(QMainWindow):
         self.logtoolbar.addWidget(themeButton)
 
     def log(self, info, color=Qt.white, bold=False):
+        print(info, end="")
         charFormat = QTextCharFormat()
         charFormat.setFontPointSize(10)
         charFormat.setForeground(color)
