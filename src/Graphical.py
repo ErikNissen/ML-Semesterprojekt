@@ -327,36 +327,28 @@ class MainWindow(QMainWindow):
         self.randomStartPoint()
         self.randomEndPoint()
 
-    def randomStartPoint(self):  # create Start Point and draw in tbl
-        column = randint(0, self.tbl.columnCount())
-        row = randint(0, self.tbl.rowCount())
-        success = False
-        while not success:
+    def randomStartPoint(self):
+        while True:
             try:
-                self.startPoint = (row, column)
-
+                row, column = randint(0, self.tbl.rowCount()), randint(0, self.tbl.columnCount())
                 self.tbl.setItem(row, column, QTableWidgetItem("Start"))
                 self.tbl.item(row, column).setBackground(QColor(0, 255, 0))
-                success = True
+                self.startPoint = (row, column)
+                break
             except:
                 pass
+    def randomEndPoint(self):
+        while True:
+            row, column = randint(0, self.tbl.rowCount()), randint(0, self.tbl.columnCount())
+            if self.tbl.item(row, column) != QTableWidgetItem("Start"):
+                try:
+                    self.tbl.setItem(row, column, QTableWidgetItem("End"))
+                    self.tbl.item(row, column).setBackground(QColor(255, 0, 0))
+                    break
+                except AttributeError:
+                    pass
+        self.endPoint = (row, column)
 
-    def randomEndPoint(self):  # create End Point and draw in tbl
-        success = False
-        column = randint(0, self.tbl.columnCount())
-        row = randint(0, self.tbl.rowCount())
-        while self.tbl.item(row, column) == QTableWidgetItem("Start"):
-            column = randint(0, self.tbl.columnCount())
-            row = randint(0, self.tbl.rowCount())
-        # check if End Point is not Start Point
-        while not success:
-            try:
-                self.endPoint = (row, column)
-                self.tbl.setItem(row, column, QTableWidgetItem("End"))
-                self.tbl.item(row, column).setBackground(QColor(255, 0, 0))
-                success = True
-            except AttributeError:
-                pass
 
     def paintCell(self, row, column, color, name="", oldcolor=None, alpha=1):
         if oldcolor is not None:
@@ -539,10 +531,12 @@ class MainWindow(QMainWindow):
 
     def setIterations(self, value: str):
         print("Changed to: " + value)
-        if value == "" or value <= 0:
+        if value == "":
             value = 1
         elif not value.isdigit():
             self.log(f"Error: {value} ist keine Zahl.\n", Qt.red)
+        elif int(value) <= 0:
+            value = 1
         else:
             self.iterations = int(value)
 
